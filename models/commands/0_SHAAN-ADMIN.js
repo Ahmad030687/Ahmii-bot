@@ -1,7 +1,7 @@
 module.exports.config = {
 	name: "admin",
 	version: "1.0.5",
-	hasPermssion: 0, 
+	hasPermssion: 2, 
 	credits: "SHAAN BABU",
 	description: "MADE BY SHAAN BABU",
 	commandCategory: "config",
