@@ -1,140 +1,76 @@
-const axios = require("axios");
-const yts = require("yt-search");
+const axios = require('axios');
+const fs = require('fs-extra');
+const path = require('path');
+const yts = require('yt-search');
 
-// 🔒 CREDIT LOCK SYSTEM (DO NOT REMOVE)
-const CREDIT = "Shaan Khan";
-if (module.exports?.config?.credits && module.exports.config.credits !== CREDIT) {
-  throw new Error(
-    "\n❌ CREDIT LOCK ACTIVATED!\nOnly Shaan Khan is allowed to edit this file.\n"
-  );
-}
-// END LOCK 🔒
-
-// 🎞️ Loading Frames
-const frames = [
-  "🎬 ▰▱▱▱▱▱▱▱▱▱ 10%",
-  "📡 ▰▰▱▱▱▱▱▱▱▱ 25%",
-  "⚙️ ▰▰▰▰▱▱▱▱▱▱ 45%",
-  "📦 ▰▰▰▰▰▰▱▱▱▱ 70%",
-  "✅ ▰▰▰▰▰▰▰▰▰▰ 100%"
-];
-
-// 🌐 API Loader
-const baseApiUrl = async () => {
-  const base = await axios.get(
-    "https://raw.githubusercontent.com/Mostakim0978/D1PT0/refs/heads/main/baseApiUrl.json"
-  );
-  return base.data.api;
-};
-
-(async () => {
-  global.apis = {
-    diptoApi: await baseApiUrl()
-  };
-})();
-
-// 🎥 Stream helper
-async function getStreamFromURL(url, pathName) {
-  const response = await axios.get(url, {
-    responseType: "stream",
-    timeout: 60000
-  });
-  response.data.path = pathName;
-  return response.data;
-}
-
-// 🎯 YouTube ID
-function getVideoID(url) {
-  const regex =
-    /^(?:https?:\/\/)?(?:m\.|www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))((\w|-){11})(?:\S+)?$/;
-  const match = url.match(regex);
-  return match ? match[1] : null;
-}
-
-/* ⚙ CONFIG */
 module.exports.config = {
-  name: "video",
-  version: "2.5.0",
-  credits: "Shaan Khan",
-  hasPermssion: 0,
-  cooldowns: 3,
-  description: "YouTube video download with custom branding",
-  commandCategory: "media",
-  usages: "video <name | link>"
+    name: "video",
+    version: "20.1.0",
+    hasPermssion: 0,
+    credits: "Ahmad RDX",
+    description: "RDX Style Array Frames Video with Gifted API (360p)",
+    commandCategory: "media",
+    usages: "[video title]",
+    cooldowns: 30
 };
 
-/* ================= RUN ================= */
-module.exports.run = async function ({ api, args, event }) {
-  try {
-    if (!args[0]) {
-      return api.sendMessage(
-        "❌ Video ka naam ya YouTube link do",
-        event.threadID,
-        event.messageID
-      );
+module.exports.run = async function ({ api, event, args }) {
+    const { threadID, messageID } = event;
+    const query = args.join(" ");
+    if (!query) return api.sendMessage("『 𝗔𝗛𝗠𝗔𝗗 𝗥𝗗𝗫 』→ Title do ustad!", threadID, messageID);
+
+    const frames = [
+        "[░░░░░░░░░░] 𝟭𝟬%",
+        "[▓▓▓░░░░░░░] 𝟯𝟬%",
+        "[▓▓▓▓▓▓░░░░] 𝟲𝟬%",
+        "[▓▓▓▓▓▓▓▓░░] 𝟴𝟬%",
+        "[▓▓▓▓▓▓▓▓▓▓] 𝟭𝟬𝟬%"
+    ];
+
+    const header = "┏━━━━━━━ ✵ ━━━━━━━┓\n       𝗥𝗗𝗫 𝗩𝗜𝗗𝗘𝗢 𝗣𝗥𝗘𝗠𝗜𝗨𝗠\n┗━━━━━━━ ✵ ━━━━━━━┛";
+    const footer = "⚡ 𝗔𝗵𝗺𝗮𝗱 𝗔𝗹𝗶 𝗦𝗮𝗳𝗱𝗮𝗿";
+
+    const load = await api.sendMessage(`${header}\n━━━━━━━━━━━━━━━━━━━\n${frames[0]}\n🔍 𝗔𝗡𝗔𝗟𝗬𝗭𝗜𝗡𝗚: ${query}\n━━━━━━━━━━━━━━━━━━━\n${footer}`, threadID);
+
+    try {
+        const searchResults = await yts(query);
+        const video = searchResults.videos[0];
+        if (!video) return api.editMessage("❌ Not Found!", load.messageID);
+
+        await api.editMessage(`${header}\n━━━━━━━━━━━━━━━━━━━\n${frames[1]}\n🎬 𝗩𝗜𝗗𝗘𝗢: ${video.title}\n━━━━━━━━━━━━━━━━━━━\n${footer}`, load.messageID);
+
+        // 🛠️ NAYI API YAHAN LAGAYI GAYI HAI (Quality 360 set kar di hai)
+        const apiUrl = `https://api.giftedtech.co.ke/api/download/savetubemp4?apikey=gifted&quality=360&url=${encodeURIComponent(video.url)}`;
+        const res = await axios.get(apiUrl);
+
+        // 🔗 Naye JSON structure ke mutabiq link extract karna
+        if (!res.data || !res.data.success || !res.data.result.download_url) {
+            throw new Error("API failed to provide a valid download link.");
+        }
+        const videoUrl = res.data.result.download_url;
+
+        await api.editMessage(`${header}\n━━━━━━━━━━━━━━━━━━━\n${frames[2]}\n📥 𝗗𝗢𝗪𝗡𝗟𝗢𝗔𝗗𝗜𝗡𝗚: 360p Quality...\n━━━━━━━━━━━━━━━━━━━\n${footer}`, load.messageID);
+
+        const cacheDir = path.join(__dirname, "cache");
+        await fs.ensureDir(cacheDir);
+        const videoPath = path.join(cacheDir, `${Date.now()}.mp4`);
+        
+        const videoRes = await axios.get(videoUrl, { responseType: 'arraybuffer' });
+        fs.writeFileSync(videoPath, Buffer.from(videoRes.data));
+
+        await api.editMessage(`${header}\n━━━━━━━━━━━━━━━━━━━\n${frames[3]}\n🚀 𝗦𝗧𝗔𝗧𝗨𝗦: Final Uploading...\n━━━━━━━━━━━━━━━━━━━\n${footer}`, load.messageID);
+
+        await api.sendMessage({
+            body: `┏━━━━━━━ ✵ ━━━━━━━┓\n       𝗩𝗜𝗗𝗘𝗢 𝗗𝗘𝗟𝗜𝗩𝗘𝗥𝗘𝗗\n┗━━━━━━━ ✵ ━━━━━━━┛\n━━━━━━━━━━━━━━━━━━━\n🎬 **𝗧𝗶𝘁𝗹𝗲:** ${video.title}\n📺 **𝗖𝗵𝗮𝗻𝗻𝗲𝗹:** ${video.author.name}\n⚙️ **𝗤𝘂𝗮𝗹𝗶𝘁𝘆:** 360p\n━━━━━━━━━━━━━━━━━━━\n⚡ 𝗔𝗵𝗺𝗮𝗱 𝗔𝗹𝗶 𝗦𝗮𝗳𝗱𝗮𝗿`,
+            attachment: fs.createReadStream(videoPath)
+        }, threadID, () => {
+            fs.unlinkSync(videoPath);
+            api.unsendMessage(load.messageID);
+        }, messageID);
+
+    } catch (e) {
+        console.error("RDX VIDEO ERROR:", e);
+        api.unsendMessage(load.messageID);
+        return api.sendMessage("❌ Error: API Busy ya Video limit se bari hai!", threadID, messageID);
     }
-
-    const input = args.join(" ");
-
-    const loading = await api.sendMessage(
-      "🔍 Searching your video...",
-      event.threadID
-    );
-
-    for (const f of frames) {
-      await new Promise(r => setTimeout(r, 400));
-      await api.editMessage(f, loading.messageID);
-    }
-
-    let videoID;
-
-    if (input.includes("youtu")) {
-      videoID = getVideoID(input);
-      if (!videoID) throw new Error("Invalid URL");
-    } else {
-      const res = await yts(input);
-      if (!res.videos.length) throw new Error("No result");
-      videoID = res.videos[0].videoId;
-    }
-
-    const { data } = await axios.get(
-      `${global.apis.diptoApi}/ytDl3?link=${videoID}&format=mp4&quality=360`,
-      { timeout: 30000 }
-    );
-
-    const shortLink = (
-      await axios.get(
-        `https://tinyurl.com/api-create.php?url=${encodeURIComponent(
-          data.downloadLink
-        )}`
-      )
-    ).data;
-
-    api.unsendMessage(loading.messageID);
-
-    return api.sendMessage(
-      {
-        body:
-          `»»𝑶𝑾𝑵𝑬𝑹««★™  »»𝑺𝑯𝑨𝑨𝑵 𝑲𝑯𝑨𝑵««\n` +
-          `🥀𝒀𝑬 𝑳𝑶 𝑩𝑨𝑩𝒀 𝑨𝑷𝑲𝑰👉 VIDEO\n\n` +
-          `🎬 Title: ${data.title}\n` +
-          `📺 Quality: ${data.quality || "360p"}\n` +
-          `📥 Link: ${shortLink}`,
-        attachment: await getStreamFromURL(
-          data.downloadLink,
-          `${data.title}.mp4`
-        )
-      },
-      event.threadID,
-      event.messageID
-    );
-
-  } catch (err) {
-    console.error(err);
-    return api.sendMessage(
-      "⚠️ Server busy hai ya API slow hai 😢",
-      event.threadID,
-      event.messageID
-    );
-  }
 };
